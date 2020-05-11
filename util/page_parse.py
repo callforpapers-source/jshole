@@ -1,0 +1,301 @@
+"""
+OWASP Maryam!
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+import re
+from util import urlib
+
+class main:
+
+	def __init__(self, page):
+		""" Page parser
+
+			page  		: web page content
+		"""
+		self.page = page.decode('utf-8') if isinstance(page, bytes) else page
+		self.urlib = urlib.main
+
+	@property
+	def pclean(self):
+		subs = r'<em>|<b>|</b>|</em>|<strong>|</strong>|<wbr>|</wbr>|<span class="vivbold qt0">|%22|<span dir="[\w]+">|</span>|<h\d>|</h\d>'
+		self.page = re.sub(subs, '', self.page)
+		self.page = re.sub(r'%3a', ' ', self.page)
+		self.page = re.sub(r'%2f', ' ', self.page)
+		self.page = re.sub(r'%2f', ' ', self.page)
+
+	def dork_clean(self, host):
+		# Clear Dork's footprints
+		host = re.sub(r"(['\"]+)|(%40|@)", '', host)
+		return host
+
+	def findall(self, reg):
+		return re.compile(reg).findall(self.page)
+
+	@property
+	def sites(self):
+		self.pclean
+		reg = re.compile(r'<cite>(.*?)</cite>')
+		resp = []
+		for itr in reg.findall(self.page):
+			resp.append(self.urlib(itr).netroot)
+		return resp
+
+	def remove_comments(self, page):
+		page = re.sub(r'(?=<!--)([\s\S]*?)-->', '', self.page)
+		page = re.sub(r'(?=/\*)([\s\S]*?)\*/', '', page)
+		return page
+
+	@property
+	def get_networks(self):
+		self.pclean
+		reg_id = {
+			'Instagram': r"(instagram\.com\/[A-z_0-9.\-]{1,30})",
+			'Facebook': r"(facebook\.com\/[A-z_0-9\-]{2,50})|(fb\.com\/[A-z_0-9\-]{2,50})",
+			'Twitter': r"(twitter\.com\/[A-z_0-9\-.]{2,40})",
+			'Github': r"(github\.com\/[A-z0-9_-]{1,39})",
+			'Github site': r"([A-z0-9_-]{1,39}\.github.(io|com))",
+			'Telegram': r"(telegram\.me/[A-z_0-9]{5,32})",
+			'Youtube': r"(youtube\.com\/user\/[A-z_0-9\-\.]{2,100})",
+			'Linkedin company': r"(linkedin\.com\/company\/[A-z_0-9\.\-]{3,50})",
+			'Linkedin individual': r"(linkedin\.com\/in\/[A-z_0-9\.\-]{3,50})",
+			'Googleplus': r"\.?(plus\.google\.com/[A-z0-9_\-.+]{3,255})",
+			'WordPress': r"([A-z0-9\-]+\.wordpress\.com)",
+			'Reddit': r"(reddit\.com/user/[A-z0-9_\-]{3,20})",
+			'Tumblr': r"([A-z0-9\-]{3,32}\.tumblr\.com)",
+			'Blogger': r"([A-z0-9\-]{3,50}\.blogspot\.com)"
+		}
+		resp = {}
+		page = self.page.replace('www.', '')
+		for i in reg_id:
+			name = re.findall(reg_id[i], page)
+			names = []
+			for j in name:
+				if j not in names:
+					names.append(j)
+			resp[i] = names
+		return resp
+
+	def get_emails(self, host):
+		self.pclean
+		host = self.dork_clean(host + '.' if '.' not in host else host)
+		emails = re.findall(r"[A-z0-9.\-]+@[A-z0-9\-\.]{0,255}?%s(?:[A-z]+)?" % host, self.page)
+		return [x.replace('\\', '') for x in list(set(emails))]
+
+	@property
+	def all_emails(self):
+		self.pclean
+		emails = re.compile(r"\w+@[A-z_\-.0-9]{5,255}").findall(self.page)
+		return emails
+
+	def get_dns(self, host, urls=None):
+		if urls:
+			data = self.dork_clean(str(urls))
+		else:
+			self.pclean
+			data = self.page
+
+		resp = []
+		reg = r"[A-z0-9\.\-%s]+\.%s" % ('%', host.replace('"', '').replace("'", ''))
+		for i in re.findall(reg, re.sub(r'\\n', '', data)):
+			i = i.replace('\\', '').replace('www.', '')
+			if i not in resp and '%' not in resp:
+				if i.lower().count(host) > 1:
+					i = i.split(host)
+					for j in i:
+						j = f"{j}{host}"
+						resp.append(j)
+					continue
+				resp.append(i)
+
+		return resp
+
+	def get_docs(self, query, urls=None):
+		self.pclean
+		if '%' in query:
+			query = self.urlib(query).unquote
+		ext = re.search(r'filetype:([A-z0-9]+)', query)
+		if ext:
+			docs = []
+			ext = f".{ext.group(1)}"
+			if urls is None:
+				urls = self.get_links
+			for url in urls:
+				if ext in url:
+					docs.append(url)
+			return list(set(docs))
+		else:
+			print("[!] Filetype not specified. Concat 'filetype:doc' to the query")
+			return []
+
+	def get_attrs(self, tag, attrs=[]):
+		reg = r"['\"\s]([^=][\w\-\d_]+)="
+		# Find all attribute names
+		if not attrs:
+			attrs = re.findall(reg, tag)
+		resp = {}
+		for attr in attrs:
+			if not re.search(fr"{attr.lower()}\s*=", tag.lower()):
+				continue
+			# Get the first char
+			fchar = re.search(fr'{attr}=([\s]+)?.', tag)
+			content= False
+			if fchar:
+				c = fchar.group()[-1:]
+				# Get content of attrs
+				if c not in "'\"":
+					content = re.search(fr'{attr}=([^\s>]+)', tag)
+				else:
+					content = re.search(fr'{attr}={c}([^{c}]*){c}', tag)
+			if content:
+				content = content.group(1)
+			content = content or ''
+			resp[attr.lower()] = content
+		return resp
+
+	@property
+	def get_metatags(self):
+		page = self.remove_comments(self.page)
+		reg = r"<(?i)meta[^>]+/?>"
+		reg = re.compile(reg)
+		resp = []
+		find = reg.findall(page)
+		for tag in find:
+			tag_attrs = self.get_attrs(tag)
+			resp.append(tag_attrs)
+		return resp
+
+	@property
+	def get_jsfiles(self):
+		page = self.remove_comments(self.page)
+		reg = r"<(?i)script[^>]+>"
+		reg = re.compile(reg)
+		resp = []
+		find = reg.findall(page)
+		for tag in find:
+			tag_attrs = self.get_attrs(tag, ['src'])
+			for attr in tag_attrs:
+				if 'src' in tag_attrs[attr]:
+					src = tag_attrs[attr].get('src')
+					urlib = self.urlib(src)
+					if urlib.check_urlfile('js'):
+						resp.append(src)
+		return resp
+
+	@property
+	def get_cssfiles(self):
+		page = self.remove_comments(self.page)
+		reg = r"<(?i)link[^>]+/>"
+		reg = re.compile(reg)
+		resp = []
+		find = reg.findall(page)
+		for tag in find:
+			tag_attr = self.get_attrs(tag, ['href'])
+			for link in tag_attr:
+				if 'href' in link:
+					href = link.get('href')
+					urlib = self.urlib(href)
+					if urlib.check_urlfile('css'):
+						resp.append(href)
+		return resp
+
+	@property
+	def get_links(self):
+		page = self.remove_comments(self.page)
+		reg = r'[\'"](/.*?)[\'"]|[\'"](http.*?)[\'"]'
+		reg = re.compile(reg)
+		find = reg.findall(self.page)
+		links = []
+		for link in find:
+			link = list(link)
+			link.pop(link.index(''))
+			link = link[0]
+			if not re.search(r'<|>|/>', link):
+				link = link.replace('\'', '').replace('"', '')
+				links.append(link)
+		return links
+
+	@property
+	def get_ahref(self):
+		page = self.remove_comments()
+		reg = re.compile(r'<[aA].*(href|HREF)=([^\s>]+)')
+		find = reg.findall(page)
+		links = []
+		for link in find:
+			link = list(link)
+			link.pop(link.index(''))
+			link = link[0]
+			links.append(link)
+		return links
+
+	@property
+	def get_credit_cards(self):
+		reg = re.compile(r"[0-9]{4}[ ]?[-]?[0-9]{4}[ ]?[-]?[0-9]{4}[ ]?[-]?[0-9]{4}")
+		find = reg.findall(self.page)
+		return list(set(find))
+
+	@property
+	def get_html_comments(self):
+		reg = re.compile(r'<!--(.*?)-->')
+		js_reg = re.compile(r'/\*(.*?)\*/')
+		find = reg.findall(self.page)
+		find.extend(js_reg.findall(self.page))
+		return list(set(find))
+
+	@property
+	def get_forms(self):
+		resp = {}
+		page = self.remove_comments(self.page)
+		reg = re.compile(r'(?i)(?s)<form.*?</form.*?>')
+		forms = reg.findall(page)
+		form_attrs = ['action', 'method', 'name', 'autocomplete', 'novalidate', 'target', 'role']
+		input_attrs = ['accept', 'alt', 'disabled', 'form', 'formaction', 'formenctype', 'formmethod',
+					   'max', 'maxlength', 'min', 'minlength', 'name', 'pattern', 'readonly', 'required',
+					   'selected', 'size', 'src', 'type', 'value', 'for']
+		for form in range(len(forms)):
+			form_tag = re.compile(r'<(?i)form.*?>')
+			form_tag = form_tag.findall(forms[form])[0]
+			get_form_attrs = self.get_attrs(form_tag, form_attrs)
+			if 'action' not in get_form_attrs:
+				get_form_attrs['action'] = '/'
+			resp[form] = {'form': get_form_attrs}
+			resp[form]['inputs'] = {}
+			inputs = re.findall(r'<(?i)input.*?/?>', forms[form])
+			textareas = re.findall(r'<textarea.*?>', forms[form])
+
+			for inp in range(len(textareas)):
+				inp_attrs = self.get_attrs(textareas[inp], input_attrs)
+				if 'textarea' in resp[form]['inputs']:
+					resp[form]['inputs']['textarea'].append(inp_attrs)
+				else:
+					resp[form]['inputs'].update({'textarea': [inp_attrs]})
+
+			for inp in range(len(inputs)):
+				inp_attrs = self.get_attrs(inputs[inp], input_attrs)
+				if not 'type' in inp_attrs:
+					type_attr = 'text'
+					inp_attrs['type'] = 'text'
+
+				type_attr = inp_attrs['type'].lower()
+				# Set default submit value
+				if type_attr == 'submnt' and 'value' not in inp_attrs:
+					inp_attrs['value'] = 'Submit Query'
+
+				if type_attr in resp[form]['inputs']:
+					resp[form]['inputs'][type_attr].append(inp_attrs)
+				else:
+					resp[form]['inputs'].update({type_attr: [inp_attrs]})
+
+		return resp
