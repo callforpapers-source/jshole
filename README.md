@@ -1,7 +1,7 @@
 # jshole
 A JavaScript components vulnrability scanner, based on RetireJS.
 ## Why use JShole instead of RetireJS?
-By default, RetireJS only searches one page, but JShole try to crawl all pages.
+By default, RetireJS only searches one page, but JShole tries to crawl all pages.
 
 ## Get Started
 ### Install
