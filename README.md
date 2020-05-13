@@ -4,11 +4,13 @@ A JavaScript components vulnrability scanner, based on RetireJS.
 By default, RetireJS only searches one page, but JShole tries to crawl all pages.
 
 ## Get Started
+### Requirements
+ * requests
 ### Install
   * `git clone https://github.com/callforpapers-source/jshole.git`
-  * `cd jshole && chmod +x jshole.py`
-  * `./jshole.py`
-  
+  * `cd jshole`
+  * `pip3 install -r requirements`
+  * `python3 jshole.py`
 ```
 usage: jshole [-h] -u URL [-d] [-l LIMIT] [-t THREAT]
 optional arguments:
