@@ -23,5 +23,3 @@ optional arguments:
   -t THREAT, --threat THREAT
                         The number of links that open per round
 ```
-
-<img src="https://i.ibb.co/RPcGxNT/Screenshot-from-2020-05-14-03-03-12.png" alt="An exampe" border="0">
