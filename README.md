@@ -2,6 +2,7 @@
 A JavaScript components vulnrability scanner, based on RetireJS.
 ## Why use JShole instead of RetireJS?
 By default, RetireJS only searches one page, but JShole tries to crawl all pages.
+## How it works?
 
 ## Get Started
 ### Requirements
@@ -22,4 +23,5 @@ optional arguments:
   -t THREAT, --threat THREAT
                         The number of links that open per round
 ```
-<a href="https://ibb.co/P4gs7MG"><img src="https://i.ibb.co/RPcGxNT/Screenshot-from-2020-05-14-03-03-12.png" alt="Screenshot-from-2020-05-14-03-03-12" border="0"></a>
+
+<img src="https://i.ibb.co/RPcGxNT/Screenshot-from-2020-05-14-03-03-12.png" alt="An exampe" border="0">
