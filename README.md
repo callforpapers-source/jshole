@@ -16,9 +16,10 @@ usage: jshole [-h] -u URL [-d] [-l LIMIT] [-t THREAT]
 optional arguments:
   -h, --help            show this help message and exit
   -u URL, --url URL     url string
-  -d, --debug           Web Scrap debuger(default=false)
+  -d, --debug           Web Scrap debugger(default=false)
   -l LIMIT, --limit LIMIT
                         Search Depth limit(default=1)
   -t THREAT, --threat THREAT
                         The number of links that open per round
 ```
+<a href="https://ibb.co/P4gs7MG"><img src="https://i.ibb.co/RPcGxNT/Screenshot-from-2020-05-14-03-03-12.png" alt="Screenshot-from-2020-05-14-03-03-12" border="0"></a>
