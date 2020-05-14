@@ -2,7 +2,6 @@ import re
 import hashlib
 import requests
 import json
-from urllib import parse
 ################################################
 # SEC 1: send request and get page content
 ################################################
