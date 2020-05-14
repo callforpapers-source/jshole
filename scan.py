@@ -2,9 +2,7 @@ import re
 import hashlib
 import requests
 import json
-################################################
-# SEC 1: send request and get page content
-################################################
+
 def get_text(*args):
 	try:
 		req = requests.get(*args)
@@ -12,9 +10,7 @@ def get_text(*args):
 		return ''
 	else:
 		return req.text
-################################################
-# SEC 2: load data/retire.json file
-################################################
+
 def jsonfile():
 	with open('data/retirejs.json', 'r') as f:
 		result = [line.rstrip(
@@ -27,10 +23,6 @@ definitions = jsonfile()
 def is_defined(o):
 	return o is not None
 
-################################################
-# SEC 3: Get regular expressions and search it
-# to the page content and return detected components
-################################################
 def scan(data, extractor, matcher=None, definitions=definitions):
 	matcher = matcher or _simple_match
 	detected = []
@@ -51,12 +43,7 @@ def scan(data, extractor, matcher=None, definitions=definitions):
 		if i not in final_detected:
 			final_detected.append(i)
 	return final_detected
-################################################
-# SEC 4: a function to match the RegExp with data
-# you can change that if you know a better way
-# It's used as a matcher argument in the scan 
-# function (_simple_match, _replacement_match).
-################################################
+
 def _simple_match(regex, data):
 	match = re.search(regex.replace('\\\\', '\\'), data)
 	return match.group(1) if match else None
@@ -74,10 +61,7 @@ def _replacement_match(regex, data):
 			return ver
 	except:pass
 	return None
-################################################
-# SEC 5: Check the version hash[_scanhash, check, 
-# _is_at_or_above, _to_comparable]
-################################################
+
 def _scanhash(hash, definitions=definitions):
 	for component in definitions:
 		hashes = definitions[component].get("extractors", {}).get("hashes", None)
@@ -90,10 +74,7 @@ def _scanhash(hash, definitions=definitions):
 						 "detection": 'hash'}]
 
 	return []
-################################################
-# SEC 6: Analyzes SCAN results and return
-# vulnerable components.
-################################################
+
 def check(results):
 	for r in results:
 		result = r
@@ -151,24 +132,15 @@ def _to_comparable(n):
 		return int(str(n), 10)
 
 	return n
-################################################
-# SEC 7: Recieve a javascript path and 
-# definations(retire.json file) and scans path.
-################################################
+
 def scan_uri(uri, definitions=definitions):
 	result = scan(uri, 'uri', definitions=definitions)
 	return check(result)
-################################################
-# SEC 8: Recieve a javascript path and 
-# definations(retire.json file) and scans filename.
-################################################
+
 def scan_filename(fileName, definitions=definitions):
 	result = scan(fileName, 'filename', definitions=definitions)
 	return check(result)
-################################################
-# SEC 9: Recieve javascript codes and 
-# definations(retire.json file) and scans codes.
-################################################
+
 def scan_file_content(content, definitions=definitions):
 	result = scan(content, 'filecontent', definitions=definitions)
 	if (len(result) == 0):
@@ -181,10 +153,7 @@ def scan_file_content(content, definitions=definitions):
 			definitions)
 
 	return check(result)
-################################################
-# SEC 10: Given a uri it scans for vulnerability
-# in uri and the content hosted at that uri
-################################################
+
 def scan_endpoint(uri, definitions=definitions):
 	uri_scan_result = scan_uri(uri, definitions)
 
@@ -193,10 +162,7 @@ def scan_endpoint(uri, definitions=definitions):
 
 	uri_scan_result.extend(filecontent_scan_result)
 	return uri_scan_result
-################################################
-# SEC 11: main function which recieve all java
-# script files and pages.
-################################################
+
 def run(scripts, response):
 	result = []
 	file = scan_file_content(response)
